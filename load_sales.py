@@ -64,7 +64,7 @@ def handler(event, context):
             n_products = random.randint(1,10)
             new_ids.extend([new_order["insert_orders"]] * n_products)
             new_quantities.extend(random.choices(random_quantities,weights=weights,k=n_products))
-            new_products.extend(random.choices(table_ids["products"],k=n_products))
+            new_products.extend(random.sample(table_ids["products"],k=n_products))
 
         cursor.callproc('insert_order_details',(new_ids,new_quantities,new_products))
         conn.commit()
