@@ -9,6 +9,11 @@ from awsglue.job import Job
 from awsglue.context import GlueContext
 from pyspark.context import SparkContext
 
+args = getResolvedOptions(sys.argv, ["db-analyst", "etl-bucket"])
+
+db_params = args["db-analyst"]
+encoded = db_params.encode("utf-8")
+db_name, user, password, port = base64.b64decode(encoded).decode("utf-8").split(",")
 
 def get_sales(db_name, username, password):
     sales_frame = spark.read.jdbc(
@@ -134,10 +139,6 @@ def write_json(dictionary, bucket):
         Key="app_data/sales.json",
         ACL="public-read",
     )
-    # sales_file = open("sales.json", "w")
-    # sales_file.write(json.dumps(dictionary))
-    # sales_file.close()
-
 
 def country_sales(frame):
     last_two_weeks = [
@@ -170,13 +171,7 @@ glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
 
-args = getResolvedOptions(sys.argv, ["db-analyst", "etl-bucket"])
-
-db_params = args["db-analyst"]
-encoded = db_params.encode("utf-8")
-db_name, user, password, port = base64.b64decode(encoded).decode("utf-8").split(",")
-
-sales_frame = get_sales()
+sales_frame = get_sales(db_name,username,password)
 
 top_ten_products = top_products_w_category(sales_frame)
 top_ten_customers = top_customers(sales_frame)
