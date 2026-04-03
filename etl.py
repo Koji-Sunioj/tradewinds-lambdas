@@ -139,7 +139,6 @@ def write_json(dictionary, bucket):
         Bucket=bucket,
         Body=json.dumps(dictionary),
         Key="app_data/sales.json",
-        ACL="public-read",
     )
 
 def country_sales(frame):
