@@ -194,4 +194,4 @@ write_object = {
     "country_sales": countries,
 }
 
-write_json(write_object,arg["etl-bucket"])
+write_json(write_object,args["etl-bucket"])
