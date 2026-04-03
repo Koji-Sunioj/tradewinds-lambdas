@@ -1,13 +1,13 @@
 import sys
-from awsglue.utils import getResolvedOptions
-
 import json
+import boto3
 import base64
 import pyspark.sql.functions as F
 
 from awsglue.job import Job
 from awsglue.context import GlueContext
 from pyspark.context import SparkContext
+from awsglue.utils import getResolvedOptions
 
 args = getResolvedOptions(sys.argv, ["db_analyst", "etl_bucket"])
 
