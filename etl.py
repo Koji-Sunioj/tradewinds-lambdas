@@ -129,7 +129,10 @@ def top_products_w_category(frame):
 def write_json(dictionary, bucket):
     s3 = boto3.client("s3")
     s3.put_object(
-        Bucket=bucket, Body=json.dumps(dictionary) Key="app_data/sales.json", ACL="public-read"
+        Bucket=bucket,
+        Body=json.dumps(dictionary),
+        Key="app_data/sales.json",
+        ACL="public-read",
     )
     # sales_file = open("sales.json", "w")
     # sales_file.write(json.dumps(dictionary))
@@ -194,4 +197,4 @@ write_object = {
     "country_sales": countries,
 }
 
-write_json(write_object,args["etl-bucket"])
+write_json(write_object, args["etl-bucket"])
