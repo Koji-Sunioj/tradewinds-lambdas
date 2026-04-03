@@ -9,9 +9,9 @@ from awsglue.job import Job
 from awsglue.context import GlueContext
 from pyspark.context import SparkContext
 
-args = getResolvedOptions(sys.argv, ["db-analyst", "etl-bucket"])
+args = getResolvedOptions(sys.argv, ["db_analyst", "etl_bucket"])
 
-db_params = args["db-analyst"]
+db_params = args["db_analyst"]
 encoded = db_params.encode("utf-8")
 db_name, user, password, port = base64.b64decode(encoded).decode("utf-8").split(",")
 
@@ -192,4 +192,4 @@ write_object = {
     "country_sales": countries,
 }
 
-write_json(write_object, args["etl-bucket"])
+write_json(write_object, args["etl_bucket"])
