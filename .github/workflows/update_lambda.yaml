@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - load_sales.py
   workflow_dispatch:
 
 env:
