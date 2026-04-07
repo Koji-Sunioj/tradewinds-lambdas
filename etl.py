@@ -12,8 +12,6 @@ from awsglue.utils import getResolvedOptions
 args = getResolvedOptions(sys.argv, ["db_analyst", "etl_bucket"])
 
 db_params = args["db_analyst"]
-print(db_params)
-print(args)
 encoded = db_params.encode("utf-8")
 db_name, username, password, port = base64.b64decode(encoded).decode("utf-8").split(",")
 
