@@ -15,6 +15,7 @@ db_params = args["db_analyst"]
 encoded = db_params.encode("utf-8")
 db_name, username, password, port = base64.b64decode(encoded).decode("utf-8").split(",")
 
+
 def get_sales(db_name, username, password):
     sales_frame = spark.read.jdbc(
         url="jdbc:postgresql://aws-1-eu-north-1.pooler.supabase.com:6543/%s" % db_name,
@@ -41,7 +42,7 @@ def week_total_sales(frame):
     return (
         grouped.orderBy("week")
         .toPandas()
-        .astype({"sales": float})
+        .astype({"sales": float, "week": str})
         .to_dict(orient="records")
     )
 
@@ -62,12 +63,11 @@ def week_category_perc(frame):
     sum_map = {
         category: F.expr("(%s / sum) * 100" % category) for category in categories
     }
-    float_map = {category: float for category in categories}
+    dict_map = {category: float for category in categories}
+    dict_map["week"] = str
 
     with_percentage = category_share.withColumns(sum_map).orderBy("week").drop("sum")
-    return (
-        with_percentage.toPandas().astype(float_map).round(2).to_dict(orient="records")
-    )
+    return with_percentage.toPandas().astype(dict_map).round(2).to_dict(orient="list")
 
 
 def mean_sale_per_order(frame):
@@ -84,7 +84,7 @@ def mean_sale_per_order(frame):
     )
     return (
         mean_sales.toPandas()
-        .astype({"mean_sale_per_order": "float"})
+        .astype({"mean_sale_per_order": "float", "week": str})
         .round(2)
         .to_dict(orient="records")
     )
@@ -139,6 +139,7 @@ def write_json(dictionary, bucket):
         Key="app_data/sales.json",
     )
 
+
 def country_sales(frame):
     last_two_weeks = [
         row.week
@@ -155,8 +156,11 @@ def country_sales(frame):
         .sum("sale")
     )
 
+    column_format = "%Y-%m-%d"
     countries = last_two_weeks.na.fill(0).withColumn(
-        "week_change", F.col(this_week) - F.col(last_week)
+        "week_change",
+        F.col(this_week.strftime(column_format))
+        - F.col(last_week.strftime(column_format)),
     )
     float_map = {
         column: float for column in countries.columns if "country" not in column
@@ -170,7 +174,7 @@ glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
 
-sales_frame = get_sales(db_name,username,password)
+sales_frame = get_sales(db_name, username, password)
 
 top_ten_products = top_products_w_category(sales_frame)
 top_ten_customers = top_customers(sales_frame)
