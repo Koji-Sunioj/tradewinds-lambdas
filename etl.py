@@ -187,7 +187,7 @@ countries = country_sales(sales_frame)
 
 write_object = {
     "top_ten_products": top_ten_products,
-    "to_ten_customers": top_ten_customers,
+    "top_ten_customers": top_ten_customers,
     "weekly_sales": week_sales,
     "categories_weekly_share": categories_weekly_share,
     "mean_sale_per_order_week": mean_sales,
