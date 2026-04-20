@@ -48,7 +48,7 @@ def week_total_sales(frame):
 
 
 def week_category_perc(frame):
-    pivoted = frame.groupBy("week").pivot("category_name").sum("sale")
+    pivoted = frame.groupBy("week").pivot("category_name").sum("sale").fillna(0)
     categories = [
         row.category_name for row in frame.select("category_name").distinct().collect()
     ]
