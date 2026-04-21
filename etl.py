@@ -101,9 +101,17 @@ def category_employee_sales(frame):
     float_map = {
         column: float for column in employee_sales.columns if "category" not in column
     }
-    return (
-        employee_sales.toPandas().astype(float_map).fillna(0).to_dict(orient="records")
-    )
+    employee_frame = employee_sales.toPandas().astype(float_map).fillna(0)
+
+    employees = [col for col in employee_frame.columns if col != "category_name"]
+    categories = employee_frame["category_name"].to_list()
+
+    matrix = []
+    for x, row in enumerate(employee_frame[employees].T.values):
+        for y, value in enumerate(row):
+            matrix.append([x, y, value])
+
+    return {"categories": categories, "employees": employees, "matrix": matrix}
 
 
 def top_customers(frame):
