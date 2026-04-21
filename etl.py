@@ -101,7 +101,7 @@ def category_employee_sales(frame):
     float_map = {
         column: float for column in employee_sales.columns if "category" not in column
     }
-    employee_frame = employee_sales.toPandas().astype(float_map).fillna(0)
+    employee_frame = employee_sales.toPandas().astype(float_map).fillna(0).sort_values("category_name")
 
     employees = [col for col in employee_frame.columns if col != "category_name"]
     categories = employee_frame["category_name"].to_list()
