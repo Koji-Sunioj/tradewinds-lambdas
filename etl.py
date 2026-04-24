@@ -101,7 +101,12 @@ def category_employee_sales(frame):
     float_map = {
         column: float for column in employee_sales.columns if "category" not in column
     }
-    employee_frame = employee_sales.toPandas().astype(float_map).fillna(0).sort_values("category_name")
+    employee_frame = (
+        employee_sales.toPandas()
+        .astype(float_map)
+        .fillna(0)
+        .sort_values("category_name")
+    )
 
     employees = [col for col in employee_frame.columns if col != "category_name"]
     categories = employee_frame["category_name"].to_list()
@@ -149,6 +154,31 @@ def write_json(dictionary, bucket):
 
 
 def country_sales(frame):
+    iso_map = {
+        "argentina": "ar",
+        "spain": "es",
+        "switzerland": "ch",
+        "italy": "it",
+        "venezuela": "ve",
+        "belgium": "be",
+        "norway": "no",
+        "sweden": "se",
+        "usa": "us",
+        "france": "fr",
+        "mexico": "mx",
+        "brazil": "br",
+        "austria": "at",
+        "poland": "pl",
+        "uk": "gb",
+        "ireland": "ie",
+        "germany": "de",
+        "denmark": "dk",
+        "canada": "ca",
+        "finland": "fi",
+        "portugal": "pt",
+    }
+    date_format = "%Y-%m-%d"
+
     last_two_weeks = [
         row.week
         for row in frame.select("week")
@@ -156,7 +186,9 @@ def country_sales(frame):
         .orderBy("week", ascending=False)
         .collect()
     ][:2]
-    this_week, last_week = last_two_weeks[0], last_two_weeks[1]
+    this_week, last_week = last_two_weeks[0].strftime(date_format), last_two_weeks[
+        1
+    ].strftime(date_format)
     last_two_weeks = (
         frame[frame.week.isin(last_two_weeks)]
         .groupBy("customer_country")
@@ -164,16 +196,21 @@ def country_sales(frame):
         .sum("sale")
     )
 
-    column_format = "%Y-%m-%d"
-    countries = last_two_weeks.na.fill(0).withColumn(
-        "week_change",
-        F.col(this_week.strftime(column_format))
-        - F.col(last_week.strftime(column_format)),
+    with_iso = last_two_weeks.withColumn(
+        "customer_country", F.lower(F.col("customer_country"))
+    ).replace(to_replace=iso_map, subset="customer_country")
+
+    countries = with_iso.na.fill(0).withColumn(
+        "week_change", F.col(this_week) - F.col(last_week)
     )
     float_map = {
         column: float for column in countries.columns if "country" not in column
     }
-    return countries.toPandas().astype(float_map).to_dict(orient="records")
+    formatted_frame = countries.toPandas().astype(float_map)
+
+    current_sales = formatted_frame[["customer_country", this_week]].values.tolist()
+    change_sales = formatted_frame[["customer_country", "week_change"]].values.tolist()
+    return {"sales": current_sales, "week-change": change_sales, "period": this_week}
 
 
 sc = SparkContext.getOrCreate()
