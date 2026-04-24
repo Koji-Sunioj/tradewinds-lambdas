@@ -179,27 +179,12 @@ def country_sales(frame):
     }
     date_format = "%Y-%m-%d"
 
-    last_two_weeks = [
-        row.week
-        for row in frame.select("week")
-        .distinct()
-        .orderBy("week", ascending=False)
-        .collect()
-    ][:2]
-    this_week, last_week = last_two_weeks[0].strftime(date_format), last_two_weeks[
-        1
-    ].strftime(date_format)
-    last_two_weeks = (
-        frame[frame.week.isin(last_two_weeks)]
-        .groupBy("customer_country")
-        .pivot("week")
-        .sum("sale")
-    )
+    last_two_weeks = [row.week for row in frame.select("week").distinct().orderBy("week",ascending=False).collect()][:2]
+    this_week = last_two_weeks[0].strftime(date_format)
+    last_week = last_two_weeks[1].strftime(date_format)
+    two_week_sales = frame[frame.week.isin([this_week,last_week])].groupBy("customer_country").pivot("week").sum("sale")
 
-    with_iso = last_two_weeks.withColumn(
-        "customer_country", F.lower(F.col("customer_country"))
-    ).replace(to_replace=iso_map, subset="customer_country")
-
+    with_iso = two_week_sales.withColumn("customer_country",F.lower(F.col("customer_country"))).replace(to_replace=iso_map, subset='customer_country')
     countries = with_iso.na.fill(0).withColumn(
         "week_change", F.col(this_week) - F.col(last_week)
     )
