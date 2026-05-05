@@ -149,7 +149,7 @@ def write_json(dictionary, bucket):
     s3.put_object(
         Bucket=bucket,
         Body=json.dumps(dictionary),
-        Key="app_data/sales.json",
+        Key="front_end/app_data/sales.json",
     )
 
 
