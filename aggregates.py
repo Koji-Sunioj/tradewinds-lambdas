@@ -179,11 +179,3 @@ def country_sales(frame):
         "customer_country", "week_change"]].values.tolist()
     return {"sales": current_sales, "week-change": change_sales, "period": this_week}
 
-
-def write_json(dictionary, bucket):
-    s3 = boto3.client("s3")
-    s3.put_object(
-        Bucket=bucket,
-        Body=json.dumps(dictionary),
-        Key="front_end/app_data/sales.json",
-    )
