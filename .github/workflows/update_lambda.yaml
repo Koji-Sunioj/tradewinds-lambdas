@@ -25,6 +25,9 @@ jobs:
           aws s3api put-object --region eu-north-1 --bucket $FUNCTION_BUCKET \
             --key etl.py --body etl.py
 
+          aws s3api put-object --region eu-north-1 --bucket $FUNCTION_BUCKET \
+            --key aggregates.py --body aggregates.py
+
   update-cfn: 
     runs-on: "ubuntu-latest"
     needs: update-lambda-s3

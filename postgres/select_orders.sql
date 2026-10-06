@@ -24,7 +24,7 @@ begin
 			orders.order_id,
 			order_details.product_id,
 			products.product_name,
-				products.price * order_details.quantity sale,
+			products.price * order_details.quantity sale,
 			products.price,
 			order_details.quantity,	 
 			orders.order_date - (to_char(orders.order_date, 'ID')::int - 1) week,
