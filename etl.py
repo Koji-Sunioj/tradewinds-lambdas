@@ -41,15 +41,6 @@ def supabase_query(db_name, username, password, query) -> DataFrame:
         },
     )
 
-
-def write_json(dictionary, bucket):
-    s3 = boto3.client("s3")
-    s3.put_object(
-        Bucket=bucket,
-        Body=json.dumps(dictionary),
-        Key="front_end/app_data/sales.json",
-    )
-
 sc = SparkContext.getOrCreate()
 sc.setLogLevel("FATAL")
 glueContext = GlueContext(sc)
@@ -75,7 +66,7 @@ cursor.execute("select max(order_id) order_id from tradewinds.default.sales;")
 databricks_max_id = cursor.fetchone()["order_id"]
 
 supabase_max_id = supabase_query(
-    db_name, username, password, "(select max(order_id) order_id from orders) something").select('order_id').collect()[0]['order_id']
+    db_name, username, password, "(select max(order_id) order_id from orders) orders").select('order_id').collect()[0]['order_id']
 
 databricks_updated = False
 
@@ -123,4 +114,11 @@ if databricks_updated:
         "country_sales": countries,
     }
 
-    write_json(write_object, args["etl_bucket"])
+    s3 = boto3.client("s3")
+    s3.put_object(
+        Bucket= args["etl_bucket"],
+        Body=json.dumps(write_object),
+        Key="front_end/app_data/sales.json",
+    )
+
+
