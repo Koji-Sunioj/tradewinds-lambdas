@@ -1,5 +1,3 @@
-import json
-import boto3
 import pyspark.sql.functions as F
 
 
