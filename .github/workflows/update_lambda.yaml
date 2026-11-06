@@ -20,13 +20,13 @@ jobs:
         run: |
           zip tradewind_functions.zip load_sales.py
           aws s3api put-object --region eu-north-1 --bucket $FUNCTION_BUCKET \
-            --key tradewind_functions.zip --body tradewind_functions.zip
+            --key functions/tradewinds_functions.zip --body tradewind_functions.zip
 
           aws s3api put-object --region eu-north-1 --bucket $FUNCTION_BUCKET \
-            --key etl.py --body etl.py
+            --key functions/tradewinds_jobs/etl.py --body etl.py
 
           aws s3api put-object --region eu-north-1 --bucket $FUNCTION_BUCKET \
-            --key aggregates.py --body aggregates.py
+            --key functions/tradewinds_jobs/aggregates.py --body aggregates.py
 
   update-cfn: 
     runs-on: "ubuntu-latest"
