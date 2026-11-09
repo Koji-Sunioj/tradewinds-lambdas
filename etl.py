@@ -2,6 +2,8 @@ import sys
 import json
 import boto3
 import base64
+import requests
+import traceback
 
 from databricks import sql
 from pyspark.sql import DataFrame
@@ -41,84 +43,94 @@ def supabase_query(db_name, username, password, query) -> DataFrame:
         },
     )
 
-sc = SparkContext.getOrCreate()
-sc.setLogLevel("FATAL")
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
+try:
+    args = getResolvedOptions(
+        sys.argv, ["db_analyst", "etl_bucket", "databricks_host", "databricks_token"])
+    db_params, databricks_token, databricks_host = args[
+        "db_analyst"], args["databricks_token"], args["databricks_host"]
+    encoded = db_params.encode("utf-8")
+    db_name, username, password, port = base64.b64decode(
+        encoded).decode("utf-8").split(",")
+    warehouse = "47594432480270a0"
 
-args = getResolvedOptions(
-    sys.argv, ["db_analyst", "etl_bucket", "databricks_host", "databricks_token"])
-db_params, databricks_token, databricks_host = args[
-    "db_analyst"], args["databricks_token"], args["databricks_host"]
-encoded = db_params.encode("utf-8")
-db_name, username, password, port = base64.b64decode(
-    encoded).decode("utf-8").split(",")
-
-
-conn = sql.connect(server_hostname=databricks_host,
-                   http_path="/sql/1.0/warehouses/47594432480270a0",
-                   access_token=databricks_token,
-                   )
-cursor = conn.cursor()
-cursor.execute("select max(order_id) order_id from tradewinds.default.sales;")
-
-databricks_max_id = cursor.fetchone()["order_id"]
-
-supabase_max_id = supabase_query(
-    db_name, username, password, "(select max(order_id) order_id from orders) orders").select('order_id').collect()[0]['order_id']
-
-databricks_updated = False
-
-if databricks_max_id == None:
-    sales_frame = supabase_query(
-        db_name, username, password, "(select * from get_orders(null)) sales")
-
-    insert_command = insert_to_databricks(sales_frame)
-    cursor.execute(insert_command)
-    databricks_updated = True
-
-elif supabase_max_id > databricks_max_id:
-    sales_frame = supabase_query(
-        db_name, username, password, "(select * from get_orders(%s)) sales" % databricks_max_id)
-
-    insert_command = insert_to_databricks(sales_frame)
-    cursor.execute(insert_command)
-    databricks_updated = True
-
-if databricks_updated:
-    select_order = "select order_id,product_id,product_name,sale,price,quantity,week,category_name,\
-        customer_name,customer_city,customer_country,seller,shipper_name,supplier_name \
-        from tradewinds.default.sales order by order_id,product_id;"
-    cursor.execute(select_order)
-    sales_orders = cursor.fetchall()
-
-    sales_frame = spark.createDataFrame(sales_orders).withColumn(
-        "category_name", F.regexp_replace("category_name", "/|\s", "_"))
-
-    top_ten_products = top_products_w_category(sales_frame)
-    top_ten_customers = top_customers(sales_frame)
-    week_sales = week_total_sales(sales_frame)
-    categories_weekly_share = week_category_perc(sales_frame)
-    mean_sales = mean_sale_per_order(sales_frame)
-    heatmap = category_employee_sales(sales_frame)
-    countries = country_sales(sales_frame)
-
-    write_object = {
-        "top_ten_products": top_ten_products,
-        "top_ten_customers": top_ten_customers,
-        "weekly_sales": week_sales,
-        "categories_weekly_share": categories_weekly_share,
-        "mean_sale_per_order_week": mean_sales,
-        "employee_sales_per_category": heatmap,
-        "country_sales": countries,
-    }
-
-    s3 = boto3.client("s3")
-    s3.put_object(
-        Bucket= args["etl_bucket"],
-        Body=json.dumps(write_object),
-        Key="front_end/app_data/sales.json",
+    response = requests.post(
+        "%s/api/2.0/sql/warehouses/%s/start" % (databricks_host, warehouse),
+        headers={
+            "Authorization": "Bearer %s" % databricks_token
+        }
     )
+    response.raise_for_status()
 
+    sc = SparkContext.getOrCreate()
+    sc.setLogLevel("FATAL")
+    glueContext = GlueContext(sc)
+    spark = glueContext.spark_session
+    job = Job(glueContext)
+    
+    conn = sql.connect(server_hostname=databricks_host,
+                    http_path="/sql/1.0/warehouses/47594432480270a0",
+                    access_token=databricks_token,
+                    )
+    cursor = conn.cursor()
+    cursor.execute("select max(order_id) order_id from tradewinds.default.sales;")
 
+    databricks_max_id = cursor.fetchone()["order_id"]
+
+    supabase_max_id = supabase_query(
+        db_name, username, password, "(select max(order_id) order_id from orders) orders").select('order_id').collect()[0]['order_id']
+
+    databricks_updated = False
+
+    if databricks_max_id == None:
+        sales_frame = supabase_query(
+            db_name, username, password, "(select * from get_orders(null)) sales")
+
+        insert_command = insert_to_databricks(sales_frame)
+        cursor.execute(insert_command)
+        databricks_updated = True
+
+    elif supabase_max_id > databricks_max_id:
+        sales_frame = supabase_query(
+            db_name, username, password, "(select * from get_orders(%s)) sales" % databricks_max_id)
+
+        insert_command = insert_to_databricks(sales_frame)
+        cursor.execute(insert_command)
+        databricks_updated = True
+
+    if databricks_updated:
+        select_order = "select order_id,product_id,product_name,sale,price,quantity,week,category_name,\
+            customer_name,customer_city,customer_country,seller,shipper_name,supplier_name \
+            from tradewinds.default.sales order by order_id,product_id;"
+        cursor.execute(select_order)
+        sales_orders = cursor.fetchall()
+
+        sales_frame = spark.createDataFrame(sales_orders).withColumn(
+            "category_name", F.regexp_replace("category_name", "/|\s", "_"))
+
+        top_ten_products = top_products_w_category(sales_frame)
+        top_ten_customers = top_customers(sales_frame)
+        week_sales = week_total_sales(sales_frame)
+        categories_weekly_share = week_category_perc(sales_frame)
+        mean_sales = mean_sale_per_order(sales_frame)
+        heatmap = category_employee_sales(sales_frame)
+        countries = country_sales(sales_frame)
+
+        write_object = {
+            "top_ten_products": top_ten_products,
+            "top_ten_customers": top_ten_customers,
+            "weekly_sales": week_sales,
+            "categories_weekly_share": categories_weekly_share,
+            "mean_sale_per_order_week": mean_sales,
+            "employee_sales_per_category": heatmap,
+            "country_sales": countries,
+        }
+
+        s3 = boto3.client("s3")
+        s3.put_object(
+            Bucket= args["etl_bucket"],
+            Body=json.dumps(write_object),
+            Key="front_end/app_data/sales.json",
+        )
+
+except Exception as error:
+    print(traceback.format_exc())
