@@ -131,6 +131,8 @@ try:
             Body=json.dumps(write_object),
             Key="front_end/app_data/sales.json",
         )
+    
+    conn.close()
 
 except Exception as error:
     print(traceback.format_exc())
