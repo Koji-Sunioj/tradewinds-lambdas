@@ -132,6 +132,7 @@ try:
             Key="front_end/app_data/sales.json",
         )
     
+    cursor.close()
     conn.close()
 
 except Exception as error:
